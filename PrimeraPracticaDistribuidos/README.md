@@ -9,12 +9,21 @@ programa `main_fm.cpp` suministrado. Se implementa un **servidor de objetos** (t
 
 ## Estado del proyecto
 
-- [ ] Fase 0 — Zona de trabajo lista
-- [ ] Fase 1 — Compilación base (`fileManager`) funciona
-- [ ] Fase 2 — Capa de red (`utils`) entendida
+- [x] Fase 0 — Zona de trabajo lista
+- [x] Fase 1 — Compilación base (`fileManager`) funciona
+- [x] Fase 2 — Capa de red (`utils`) entendida
 - [ ] Fase 3 — Servidor + cliente en localhost
+  - [x] Servidor: arranque, bucle de clientes, hilo por cliente
+  - [x] Servidor: `list_files` (empaquetar lista de nombres)
+  - [x] Servidor: `read_file` (leer fichero y devolver bytes)
+  - [ ] Servidor: `write_file` (recibir nombre + bytes y escribir)
+  - [ ] Cliente: conexión + envío de comandos + recepción
+  - [ ] Prueba de punta a punta en localhost
 - [ ] Fase 4 — Cliente transparente (`main_fm.cpp` reutilizable)
-- [ ] Fase 5 — Broker (extra, opcional)
+- [ ] Fase 5 — Broker (OBLIGATORIO para el examen, aunque sea opcional en la entrega)
+  - [ ] Broker: directorio de servidores + balanceo por nº de conexiones
+  - [ ] Server: registrarse en el broker al arrancar (actúa también de cliente)
+  - [ ] Cliente: pedir servidor al broker antes de conectarse
 - [ ] Fase 6 — Entrega
 
 ---
