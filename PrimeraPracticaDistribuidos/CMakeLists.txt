@@ -27,3 +27,7 @@ target_link_libraries(client pthread stdc++fs)
 project (fileManager)
 add_executable (fileManager main_fm.cpp filemanager.h filemanager_proxy.h filemanager_proxy.cpp utils.cpp utils.h)
 target_link_libraries(fileManager pthread stdc++fs)
+
+project(broker LANGUAGES CXX)
+add_executable(broker utils.h utils.cpp broker.cpp)
+target_link_libraries(broker pthread stdc++fs)

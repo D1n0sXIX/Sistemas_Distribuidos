@@ -21,9 +21,12 @@ programa `main_fm.cpp` suministrado. Se implementa un **servidor de objetos** (t
   - [x] Prueba de punta a punta en localhost
 - [x] Fase 4 — Cliente transparente (`main_fm.cpp` reutilizable)
 - [ ] Fase 5 — Broker (OBLIGATORIO para el examen, aunque sea opcional en la entrega)
-  - [ ] Broker: directorio de servidores + balanceo por nº de conexiones
+  - [x] Broker: estructura base compilando (BrokerCommand, Servidores_t, ServerList, bucle de aceptación, switch vacío)
+  - [ ] Broker: implementar register_server (añadir a ServerList + ACK)
+  - [ ] Broker: implementar request_server (devolver IP:puerto con menos carga)
+  - [ ] Broker: implementar release_server (decrementar contador)
   - [ ] Server: registrarse en el broker al arrancar (actúa también de cliente)
-  - [ ] Cliente: pedir servidor al broker antes de conectarse
+  - [ ] Proxy: pedir servidor al broker antes de conectarse + release en destructor
 - [ ] Fase 6 — Entrega
 
 ---
