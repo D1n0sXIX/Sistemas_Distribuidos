@@ -25,5 +25,5 @@ target_link_libraries(client pthread stdc++fs)
 
 
 project (fileManager)
-add_executable (fileManager main_fm.cpp filemanager.h)
-target_link_libraries(fileManager pthread FileManager stdc++fs)
+add_executable (fileManager main_fm.cpp filemanager.h filemanager_proxy.h filemanager_proxy.cpp utils.cpp utils.h)
+target_link_libraries(fileManager pthread stdc++fs)
