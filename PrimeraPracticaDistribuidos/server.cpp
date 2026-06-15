@@ -5,9 +5,16 @@
 #include <list>
 #include "filemanager.h"
 #include <mutex>
+#define BROKERIP "127.0.0.1"
+#define BROKERPORT 5000
+
+enum BrokerCommand {
+    register_server,
+    request_server,
+    release_server
+};
 
 using namespace std;
-#define SERVERPORT 1234
 
 FileManager fm("FileManagerDir");
 mutex fm_mutex;
@@ -24,13 +31,30 @@ enum Command {
 int main(int argc, char** argv){
 // Variables de apoyo
 bool salir=false;
+// 1. Obtenemos por parametros de entrada para mayor comodidad
+int serverPort = atoi(argv[1]);
 
-// 1. Arrancar la escucha en un puerto
-initServer(SERVERPORT);
-cout<<"Server started on port "<<SERVERPORT<<endl;
-cout<<"Waiting for clients..."<<endl;
+// 2. iniciamos como "cliente" al broker
+connection_t brokerConn = initClient(BROKERIP, BROKERPORT);
+cout << "Conectado al broker con IP " << BROKERIP << " y puerto " << BROKERPORT << endl;
+// Mandamos la peticion a registrarnos como servidor
+vector <unsigned char> buffer;
+pack(buffer, register_server);
+pack(buffer, serverPort);
+sendMSG<unsigned char>(brokerConn.serverId, buffer);
 
-// 2. Bucle de aceptacion de clientes
+// 3. Obtenemos el ACK del broker
+vector<unsigned char> response;
+recvMSG<unsigned char>(brokerConn.serverId, response);
+bool ack = unpack<bool>(response);
+if(!ack){
+    cout << "No se pudo conectar al broker" << endl;
+    return -1;
+}
+// 4. Iniciamos como servidor que somos
+initServer(serverPort);
+
+// 5. Bucle de aceptacion de clientes
 while(!salir){
     if(checkClient()){
         int clientID=getLastClientID();
