@@ -35,20 +35,20 @@ Configuraciones avanzadas (para optar al 10, ver §9):
 .
 ├── CLAUDE.md                 # Este archivo (contexto)
 ├── README.md                 # Seguimiento por fases
-├── docker/
-│   ├── Dockerfile.broker     # imagen del broker (32002)
-│   ├── Dockerfile.server     # imagen del server (32001 + FileManagerDir)
-│   └── resolv.conf           # solo si se usa curl api.ipify.org
-├── k8s/                      # manifiestos (deployments/services/PV/PVC)
-└── bin/                      # ⚠️ binarios del profesor — NO MODIFICAR
-    ├── brokerFileManager
-    ├── serverFileManager
-    └── clientFileManager
+├── bin/                      # ⚠️ binarios del profesor — NO MODIFICAR
+│   ├── brokerFileManager
+│   ├── serverFileManager
+│   └── clientFileManager
+├── broker/
+│   └── Dockerfile            # imagen del broker (32002)
+├── server/
+│   └── Dockerfile            # imagen del server (32001 + FileManagerDir)
+└── k8s/                      # manifiestos (deployments/services/PV/PVC)
 ```
 
 Reglas para el agente al operar en el repo:
 - **Nunca** editar ni recompilar nada en `bin/`. Son artefactos precompilados intocables.
-- El trabajo editable son `docker/`, `k8s/`, scripts y la documentación.
+- El trabajo editable son `broker/`, `server/`, `k8s/`, scripts y la documentación.
 - Antes de generar un YAML/Dockerfile completo, proponer el enfoque y dejar que el alumno lo escriba (ver §0).
 
 ---
@@ -193,7 +193,7 @@ El clúster kubeadm y la app necesitan que los **Security Groups** del VPC permi
 
 ## 8. Fases del despliegue (hitos, estilo Práctica 1)
 
-- [ ] **Fase 0 — Familiarización (sin K8s).** Probar los 3 binarios "a pelo" entre **2 instancias EC2** (o local): arrancar broker, luego server (pasándole IP broker + su IP/puerto), luego cliente. Verificar `lls/upload/download`. Esto valida los contratos y la red antes de meter Docker/K8s.
+- [x] **Fase 0 — Familiarización (sin K8s).** ✅ Completada en local (3 terminales, `127.0.0.1`). Verificados `lls/upload/download`. Confirmado: broker usa 32002 fijo; server necesita `FileManagerDir/` junto al ejecutable. Pendiente repetir en EC2 para validar red real.
 - [ ] **Fase 1 — Imágenes Docker.** Escribir Dockerfile del **server** (base `ubuntu:20.04`, copiar binario, `mkdir FileManagerDir`, exponer 32001) y del **broker** (exponer 32002). Construir y probar los contenedores en una EC2.
 - [ ] **Fase 2 — Distribución de imagen.** Publicar en un registry (Docker Hub o registry local) para que todos los nodos puedan hacer `pull` (ver §10).
 - [ ] **Fase 3 — Clúster kubeadm.** Maquina1 = control-plane; ≥1 nodo esclavo (+ idealmente nodo broker). Instalar runtime + kubeadm/kubelet/kubectl en las EC2, `kubeadm init`, CNI, `kubeadm join`.

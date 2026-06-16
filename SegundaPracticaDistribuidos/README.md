@@ -8,7 +8,7 @@ Despliegue de una aplicación distribuida (broker + servidores de ficheros + cli
 
 ---
 
-## Arquitectura
+## Arquitectura de la app
 
 ```
                  (1) registra IP/Puerto
@@ -30,13 +30,66 @@ Despliegue de una aplicación distribuida (broker + servidores de ficheros + cli
 
 ---
 
+## Arquitectura en Kubernetes
+
+El **control-plane no interviene en el flujo de la app** — solo gestiona el clúster (lo usas tú con `kubectl`). La app corre entera en el nodo worker.
+
+```
+┌─────────────────────── CLÚSTER KUBERNETES ──────────────────────────┐
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  NODO 1 — EC2 (control-plane)                                │    │
+│  │  Cerebro de K8s (API, scheduler...). Solo gestión.           │    │
+│  │  Tu kubectl habla con él. La app NO corre aquí.              │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  NODO 2 — EC2 (worker)                                       │    │
+│  │                                                              │    │
+│  │   ┌─────────────────────┐   ┌─────────────────────┐         │    │
+│  │   │  POD (broker)       │   │  POD (server)       │         │    │
+│  │   │  ┌───────────────┐  │   │  ┌───────────────┐  │         │    │
+│  │   │  │ contenedor    │  │   │  │ contenedor    │  │         │    │
+│  │   │  │ brokerFile-   │  │   │  │ serverFile-   │  │         │    │
+│  │   │  │ Manager       │  │   │  │ Manager       │  │         │    │
+│  │   │  └───────────────┘  │   │  └───────────────┘  │         │    │
+│  │   └─────────────────────┘   └─────────────────────┘         │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Flujo de una conexión cliente → servidor
+
+```
+Tu Arch Linux (clientFileManager)
+     │
+     │ 1. conecta al BROKER (puerto 32002)
+     ▼
+EC2 worker — Pod broker
+     │
+     │ 2. "el server está en IP:puerto X"  (solo un directorio, no redirige tráfico)
+     │
+     ◀───
+     │
+     │ 3. conecta DIRECTAMENTE al SERVER (puerto 32001)
+     ▼
+EC2 worker — Pod server
+     │
+     │ 4. lls / upload / download
+```
+
+> El broker **no actúa de intermediario** en las transferencias — solo es un directorio de conexión. Una vez que el cliente recibe la IP:puerto del server, habla directamente con él.
+
+---
+
 ## Seguimiento por fases
 
-### Fase 0 — Familiarización (sin K8s)
-- [ ] Probar los 3 binarios "a pelo" entre 2 instancias EC2
-- [ ] Confirmar si `brokerFileManager` admite puerto por `argv` o usa 32002 fijo
-- [ ] Verificar `ls`, `lls`, `upload`, `download`, `exit()` end-to-end
-- [ ] Anotar qué IP usa el cliente para alcanzar al server (privada VPC vs pública)
+### Fase 0 — Familiarización (sin K8s) ✅
+- [x] Probar los 3 binarios "a pelo" en local (3 terminales: broker, server, cliente)
+- [x] Verificar `ls`, `lls`, `upload`, `download`, `exit()` end-to-end
+- [x] Confirmar que `brokerFileManager` usa 32002 fijo
+- [x] Confirmar que `serverFileManager` necesita `FileManagerDir/` junto al ejecutable
+- [ ] Repetir en EC2 para verificar conectividad real entre instancias
 
 ### Fase 1 — Imágenes Docker
 - [ ] `Dockerfile.server` (base `ubuntu:20.04`, copia binario, `mkdir FileManagerDir`, EXPOSE 32001)
@@ -74,26 +127,26 @@ Despliegue de una aplicación distribuida (broker + servidores de ficheros + cli
 
 ---
 
-## Estructura del repositorio (propuesta, libre)
+## Estructura del repositorio
 
 ```
 .
 ├── CLAUDE.md                 # Contexto para agentes Claude
 ├── README.md                 # Este archivo
-├── docker/
-│   ├── Dockerfile.broker
-│   ├── Dockerfile.server
-│   └── resolv.conf
-├── k8s/
-│   ├── broker-deployment.yaml
-│   ├── broker-service.yaml
-│   ├── server-deployment.yaml
-│   ├── server-service.yaml
-│   └── nfs/                   # (avanzada 2) PV/PVC NFS
-└── bin/                       # binarios del profesor (NO modificar)
-    ├── brokerFileManager
-    ├── serverFileManager
-    └── clientFileManager
+├── bin/                      # ⚠️ binarios del profesor (NO modificar)
+│   ├── brokerFileManager
+│   ├── serverFileManager
+│   └── clientFileManager
+├── broker/
+│   └── Dockerfile
+├── server/
+│   └── Dockerfile
+└── k8s/
+    ├── broker-deployment.yaml
+    ├── broker-service.yaml
+    ├── server-deployment.yaml
+    ├── server-service.yaml
+    └── nfs/                   # (avanzada 2) PV/PVC NFS
 ```
 
 ---
