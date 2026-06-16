@@ -20,6 +20,8 @@ class FileManager
 private:
     // Guarda la conexión abierta con el servidor para usarla en cada método
     connection_t conn;
+    string ip;
+    int port;
 
 public:
     // Constructor: recibe el path igual que el FileManager real,

@@ -20,14 +20,12 @@ programa `main_fm.cpp` suministrado. Se implementa un **servidor de objetos** (t
   - [x] Cliente: conexión + envío de comandos + recepción
   - [x] Prueba de punta a punta en localhost
 - [x] Fase 4 — Cliente transparente (`main_fm.cpp` reutilizable)
-- [ ] Fase 5 — Broker (OBLIGATORIO para el examen, aunque sea opcional en la entrega)
-  - [x] Broker: estructura base compilando (BrokerCommand, Servidores_t, ServerList, bucle de aceptación, switch vacío)
-  - [ ] Broker: implementar register_server (añadir a ServerList + ACK)
-  - [ ] Broker: implementar request_server (devolver IP:puerto con menos carga)
-  - [ ] Broker: implementar release_server (decrementar contador)
-  - [ ] Server: registrarse en el broker al arrancar (actúa también de cliente)
-  - [ ] Proxy: pedir servidor al broker antes de conectarse + release en destructor
-- [ ] Fase 6 — Entrega
+- [x] Fase 5 — Broker (probado de punta a punta)
+  - [x] Broker: `register_server` — añade a ServerList + ACK
+  - [x] Broker: `request_server` — devuelve IP:puerto con menos carga (balanceo B2)
+  - [x] Broker: `release_server` — decrementa contador activos
+  - [x] Server: se registra en el broker al arrancar (actúa como cliente)
+  - [x] Proxy: pide servidor al broker en el constructor + release en destructor
 
 ---
 
@@ -139,9 +137,6 @@ Patrón de un `string` por red: primero su longitud, luego sus caracteres.
 - **Local vs AWS:** P1 se hace en local (una VM con Linux vale; servidor y cliente por
   `127.0.0.1`). AWS solo es necesario para el broker multi-máquina y para la Práctica 2
   (Kubernetes).
-- **Entrega:** ZIP con los archivos generados/editados, cada uno con el nombre del alumno
-  en un comentario al inicio. Nombre obligatorio del ZIP:
-  `PR1SISDIS_Alumno1_Apellido1.zip`. La carpeta `build/` no se entrega.
 
 ## Recordatorio para Git
 
@@ -150,3 +145,159 @@ Patrón de un `string` por red: primero su longitud, luego sus caracteres.
 build/
 *.o
 ```
+
+---
+
+## Guía de estudio — Patrones clave para el examen
+
+### Diagrama completo del sistema (con broker)
+
+```
+                        ┌─────────────────┐
+                        │     BROKER      │  puerto 5000 (fijo)
+                        │  ServerList[]   │  lista de servers registrados
+                        │  activos: N     │  contador de conexiones activas
+                        └────────┬────────┘
+                                 │
+               ┌─────────────────┴──────────────────┐
+               │  register_server                    │  request_server / release_server
+               │  (server → broker al arrancar)      │  (proxy → broker en ctor/dtor)
+               │                                     │
+    ┌──────────▼──────────┐               ┌──────────▼──────────┐
+    │       SERVER        │               │        PROXY         │
+    │  puerto argv[1]     │  ←── TCP ───► │  filemanager_proxy   │
+    │  FileManager real   │  puerto dado  │  (dentro de main_fm) │
+    │  libFileManager.a   │  por broker   └─────────────────────┘
+    └─────────────────────┘
+
+Flujo de arranque:
+  1. broker arranca → escucha en 5000
+  2. server arranca → initClient(broker) → register_server + puerto → recibe ACK → initServer(puerto)
+  3. proxy (constructor) → initClient(broker) → request_server → recibe IP:puerto → initClient(server)
+  4. proxy (destructor) → initClient(broker) → release_server + IP:puerto → closeConnection(broker)
+                        → closeConnection(server)
+```
+
+---
+
+### Patrón pack/unpack (el más repetido)
+
+TCP es un flujo de bytes sin separadores. Para mandar un string o un bloque de bytes hay que decir primero cuántos vienen — eso es el "framing".
+
+**Empaquetar y enviar:**
+```
+vector<unsigned char> buf;
+
+pack(buf, comando);           // tipo enum/int/bool/size_t  → mete sizeof(T) bytes
+pack(buf, nombre.size());     // longitud del string (size_t = 8 bytes en 64 bits)
+packv(buf, nombre.data(), nombre.size());  // los bytes del string en sí
+
+sendMSG<unsigned char>(id, buf);   // envía todo el buffer de golpe
+```
+
+**Recibir y desempaquetar:**
+```
+vector<unsigned char> resp;
+recvMSG<unsigned char>(id, resp);  // recibe el mensaje completo
+
+T valor = unpack<T>(resp);         // consume sizeof(T) bytes del frente
+string nombre;
+nombre.resize(unpack<size_t>(resp));         // primero la longitud
+unpackv(resp, (char*)nombre.data(), nombre.size());  // luego los datos
+```
+
+> `unpack` va consumiendo el buffer de izquierda a derecha en el mismo orden en que se empaquetó. No hay índice manual — cada llamada avanza el cursor interno.
+
+**Representación del buffer para `read_file`:**
+```
+┌─────────────┬──────────────────┬──────────────────────────────┐
+│ Command (4B)│  len nombre (8B) │  nombre (len bytes)          │
+└─────────────┴──────────────────┴──────────────────────────────┘
+  pack(cmd)     pack(name.size())   packv(name.data(), name.size())
+```
+
+---
+
+### Por qué `pack` la longitud antes que el dato
+
+Sin longitud, el receptor no sabe cuántos bytes leer:
+```
+"hola" "mundo"   →   686f6c61 6d756e64 6f   (flujo continuo, sin separación)
+```
+Con longitud previa:
+```
+[4]["hola"][5]["mundo"]  →  el receptor lee 4, extrae "hola", lee 5, extrae "mundo"
+```
+
+---
+
+### `getpeername()` — obtener la IP del cliente conectado
+
+Cuando el broker acepta una conexión de un server, solo tiene el `clientID`. Para saber la IP real del server que se conectó, usa `getpeername()`:
+
+```cpp
+struct sockaddr_in addr;        // estructura que almacenará la dirección
+socklen_t addrlen = sizeof(addr);
+int sock = clientList[clientID].socket;   // socket del cliente (dado por utils)
+
+getpeername(sock, (struct sockaddr*)&addr, &addrlen);
+// addr.sin_addr ahora tiene la IP del extremo remoto
+string ip = inet_ntoa(addr.sin_addr);   // convierte la IP a string "x.x.x.x"
+```
+
+> **Por qué no manda el server su propia IP:** el server no sabe qué IP tiene "hacia fuera" (especialmente en AWS). El broker la obtiene del socket, que es la fuente fiable.
+
+---
+
+### Puntero `*` vs referencia `&` — búsqueda del servidor con menos carga
+
+```cpp
+Servidores_t* minServer = &ServerList[0];  // (1) puntero al primer elemento
+for (auto& server : ServerList) {          // (2) referencia: no copia, permite modificar
+    if (server.active < minServer->active) {  // (3) -> porque minServer es puntero
+        minServer = &server;               // (4) redirigimos el puntero al nuevo mínimo
+    }
+}
+ServerList_mutex.lock();
+minServer->active++;                       // (5) modifica el elemento real del vector
+ServerList_mutex.unlock();
+```
+
+| Símbolo | Qué hace | Cuándo |
+|---|---|---|
+| `T*` | Puntero: guarda una dirección de memoria | Cuando quieres redirigir a distintos objetos |
+| `T&` | Referencia: alias del objeto original | Cuando solo quieres acceder/modificar sin copiar |
+| `&var` | Operador "dirección de": obtiene la dirección de `var` | Al inicializar un puntero |
+| `ptr->campo` | Accede al campo a través de un puntero | Equivale a `(*ptr).campo` |
+
+**Por qué no usar un índice `int`:** el puntero permite modificar directamente `minServer->active++` sin hacer `ServerList[idx].active++` — ambos son válidos pero el puntero es más directo y es el patrón habitual en C++.
+
+---
+
+### Ciclo de vida de una conexión
+
+```
+Lado cliente:                          Lado servidor:
+connection_t conn = initClient(ip, p)  initServer(port)
+                                       while(checkClient()) → getLastClientID()
+                                       thread(atenderCliente, id)
+
+sendMSG(conn.serverId, buf)    →       recvMSG(clientID, buf)
+recvMSG(conn.serverId, resp)   ←       sendMSG(clientID, resp)
+
+closeConnection(conn.serverId)         // buffer vacío → cliente desconectado
+```
+
+> `conn.serverId` es el ID interno que asigna `utils` a cada conexión. No es un puerto ni una IP — es simplemente el índice para decirle a `utils` con quién hablar.
+
+---
+
+### Enum como protocolo compartido
+
+El `enum Command` debe declararse **en el mismo orden** en server y en client/proxy. El valor que viaja por la red es el entero subyacente (0, 1, 2…), no el nombre.
+
+```cpp
+enum Command { list_files=0, read_file=1, write_file=2 };
+```
+
+Si un lado tiene un enum distinto, `unpack<Command>` devolverá el entero correcto pero lo interpretará como otro caso del switch → bug silencioso difícil de detectar.
