@@ -1,5 +1,5 @@
 # Práctica 2 — Despliegue con Docker + Kubernetes en AWS
-
+--- Link a AWS - https://awsacademy.instructure.com/login/canvas
 Despliegue de una aplicación distribuida (broker + servidores de ficheros + cliente) sobre un clúster de **Kubernetes (kubeadm)** montado en instancias **EC2**, empaquetando los programas servidor en **imágenes Docker**.
 
 > Asignatura: Programación de Sistemas Distribuidos · Alumno: **D1n0sXIX** (poner nombre/apellidos reales en la entrega)
