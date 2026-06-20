@@ -89,29 +89,35 @@ EC2 worker — Pod server
 - [x] Verificar `ls`, `lls`, `upload`, `download`, `exit()` end-to-end
 - [x] Confirmar que `brokerFileManager` usa 32002 fijo
 - [x] Confirmar que `serverFileManager` necesita `FileManagerDir/` junto al ejecutable
-- [ ] Repetir en EC2 para verificar conectividad real entre instancias
 
-### Fase 1 — Imágenes Docker
-- [ ] `Dockerfile.server` (base `ubuntu:20.04`, copia binario, `mkdir FileManagerDir`, EXPOSE 32001)
-- [ ] `Dockerfile.broker` (análogo, EXPOSE 32002, sin `FileManagerDir`)
-- [ ] Construir y probar ambos contenedores en una EC2
+### Fase 1 — Imágenes Docker ✅ (parcial)
+- [x] `broker/Dockerfile` escrito — ubuntu:20.04, brokerFileManager, EXPOSE 32002
+- [x] `server/Dockerfile` escrito — ubuntu:20.04, curl, serverFileManager, FileManagerDir, resolv.conf, EXPOSE 32001
+- [x] Binarios copiados a `broker/` y `server/` para el COPY
+- [ ] **Pendiente:** construir y pushear imágenes a Docker Hub (hacer desde Windows con Docker Desktop)
 
 ### Fase 2 — Distribución de imagen
-- [ ] Elegir estrategia de registry (Docker Hub / registry local / save+load)
-- [ ] Publicar imágenes y verificar `pull` desde otro nodo
+- [ ] `docker build` + `docker push` de `d1n0s/p2-broker:latest` y `d1n0s/p2-server:latest`
+- [ ] Verificar que las imágenes están en Docker Hub
 
-### Fase 3 — Clúster kubeadm
-- [ ] Maquina1 = control-plane (`kubeadm init`)
-- [ ] Instalar CNI (Flannel/Calico)
-- [ ] ≥1 nodo esclavo unido (`kubeadm join`)
-- [ ] (idealmente) nodo dedicado para el broker
-- [ ] Security Groups: 32001, 32002, NodePort 30000–32767, puertos K8s, SSH
-- [ ] `kubectl get nodes -o wide` todos en `Ready`
+### Fase 3 — Clúster kubeadm ✅
+- [x] containerd instalado y configurado en control-plane y worker
+- [x] kubeadm/kubelet/kubectl v1.29.15 instalados en ambos nodos
+- [x] `kubeadm init --pod-network-cidr=10.244.0.0/16` en control-plane
+- [x] Flannel CNI instalado
+- [x] Worker unido con `kubeadm join`
+- [x] `kubectl get nodes` → ambos nodos en `Ready`
+
+  | Nodo | IP pública | IP privada |
+  |---|---|---|
+  | control-plane | `3.82.160.228` | `172.31.85.97` |
+  | worker | `34.238.240.98` | `172.31.81.126` |
 
 ### Fase 4 — Deployments + Services
-- [ ] Deployment + Service del broker (alcanzable por servers y cliente)
-- [ ] Deployment + Service del server
-- [ ] Resolver el autorregistro de IP/puerto (decidir hostNetwork vs NodePort — ver §6 `CLAUDE.md`)
+- [ ] Crear `k8s/broker-deployment.yaml` con `hostNetwork: true`
+- [ ] Crear `k8s/broker-service.yaml` (NodePort 32002 para cliente externo)
+- [ ] Crear `k8s/server-deployment.yaml` con `hostNetwork: true`
+- [ ] Aplicar manifiestos con `kubectl apply -f k8s/`
 - [ ] Verificar en `kubectl logs` la dirección que registra el server
 
 ### Fase 5 — Demo end-to-end
