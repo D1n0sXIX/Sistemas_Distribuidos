@@ -90,15 +90,14 @@ EC2 worker — Pod server
 - [x] Confirmar que `brokerFileManager` usa 32002 fijo
 - [x] Confirmar que `serverFileManager` necesita `FileManagerDir/` junto al ejecutable
 
-### Fase 1 — Imágenes Docker ✅ (parcial)
+### Fase 1 — Imágenes Docker ✅
 - [x] `broker/Dockerfile` escrito — ubuntu:20.04, brokerFileManager, EXPOSE 32002
 - [x] `server/Dockerfile` escrito — ubuntu:20.04, curl, serverFileManager, FileManagerDir, resolv.conf, EXPOSE 32001
 - [x] Binarios copiados a `broker/` y `server/` para el COPY
-- [ ] **Pendiente:** construir y pushear imágenes a Docker Hub (hacer desde Windows con Docker Desktop)
 
-### Fase 2 — Distribución de imagen
-- [ ] `docker build` + `docker push` de `d1n0s/p2-broker:latest` y `d1n0s/p2-server:latest`
-- [ ] Verificar que las imágenes están en Docker Hub
+### Fase 2 — Distribución de imagen ✅
+- [x] `docker build` + `docker push` de `d1n0s/p2-broker:latest` y `d1n0s/p2-server:latest`
+- [x] Imágenes disponibles en Docker Hub — Kubernetes las descarga automáticamente al desplegar
 
 ### Fase 3 — Clúster kubeadm ✅
 - [x] containerd instalado y configurado en control-plane y worker
@@ -110,19 +109,22 @@ EC2 worker — Pod server
 
   | Nodo | IP pública | IP privada |
   |---|---|---|
-  | control-plane | `3.82.160.228` | `172.31.85.97` |
-  | worker | `34.238.240.98` | `172.31.81.126` |
+  | control-plane | `18.233.154.106` | `172.31.85.97` |
+  | worker | `3.84.165.31` | `172.31.81.126` |
+  | cliente | `98.93.149.89` | — |
 
-### Fase 4 — Deployments + Services
-- [ ] Crear `k8s/broker-deployment.yaml` con `hostNetwork: true`
-- [ ] Crear `k8s/broker-service.yaml` (NodePort 32002 para cliente externo)
-- [ ] Crear `k8s/server-deployment.yaml` con `hostNetwork: true`
-- [ ] Aplicar manifiestos con `kubectl apply -f k8s/`
-- [ ] Verificar en `kubectl logs` la dirección que registra el server
+  **kubectl desde Arch:** kubeconfig copiado con `scp`, IP cambiada a pública, `insecure-skip-tls-verify: true` (certificado no incluye IP pública).
 
-### Fase 5 — Demo end-to-end
-- [ ] Cliente → broker → server
-- [ ] `upload` y `download` de varios ficheros
+### Fase 4 — Deployments + Services ✅
+- [x] `k8s/broker-deployment.yaml` — 1 réplica, puerto 32002
+- [x] `k8s/broker-service.yaml` — NodePort 32002 (accesible desde `p2-cliente` dentro del VPC)
+- [x] `k8s/server-deployment.yaml` — `hostNetwork: true`, `dnsPolicy: ClusterFirstWithHostNet`, `strategy: Recreate`
+- [x] `kubectl apply -f k8s/` — todos los pods en `Running`
+
+### Fase 5 — Demo end-to-end (parcial ✅)
+- [x] Cliente (`p2-cliente`) → broker → server: conexión establecida
+- [x] `upload test.txt` → fichero aparece en `lls` ✅
+- [x] `download test.txt` → fichero descargado en cliente ✅
 - [ ] Varias conexiones simultáneas
 - [ ] Repetir la demo varias veces (robustez)
 
@@ -151,7 +153,6 @@ EC2 worker — Pod server
     ├── broker-deployment.yaml
     ├── broker-service.yaml
     ├── server-deployment.yaml
-    ├── server-service.yaml
     └── nfs/                   # (avanzada 2) PV/PVC NFS
 ```
 

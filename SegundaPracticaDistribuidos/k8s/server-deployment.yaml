@@ -1,0 +1,30 @@
+# -- DEPLOYMENT --
+# Un Deployment le dice a Kubernetes: "quiero que este pod esté siempre corriendo"
+
+apiVersion: apps/v1       # versión de la API de Kubernetes para Deployments
+kind: Deployment          # tipo de objeto
+
+metadata:
+  name: server-deployment   # nombre del Deployment
+
+spec:
+  replicas: 1               # cuántas copias del pod quieremos
+  strategy:
+    type: Recreate
+  selector:               # cómo encuentra Kubernetes los pods que gestiona este Deployment
+    matchLabels:
+      app: server               # debe coincidir con la etiqueta de abajo
+  template:               # plantilla del pod que se va a crear
+    metadata:
+      labels:
+        app: server       # Etiqueta del pod
+    spec:
+        hostNetwork: true
+        dnsPolicy: ClusterFirstWithHostNet
+        containers:
+          - name: server          # nombre del contenedor
+            image: d1n0s/p2-server:latest        # imagen Docker a usar
+            command: ["/serverFileManager"]      # Binario que se va a ejecutar en el contenedor
+            args: ["10.111.182.40", "32002", "172.31.81.126", "32001"] # argumentos para el comando: nombreDelServicio , puertoDelServicio, IPDelServicio, PuertoPorElQueEscuchamos
+            ports:
+              - containerPort: 32001
