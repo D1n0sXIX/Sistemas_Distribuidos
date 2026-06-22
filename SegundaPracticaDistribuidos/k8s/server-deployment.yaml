@@ -7,8 +7,11 @@ kind: Deployment          # tipo de objeto
 metadata:
   name: server-deployment   # nombre del Deployment
 
+
+
+
 spec:
-  replicas: 1               # cuántas copias del pod quieremos
+  replicas: 2               # cuántas copias del pod quieremos
   strategy:
     type: Recreate
   selector:               # cómo encuentra Kubernetes los pods que gestiona este Deployment
@@ -19,12 +22,19 @@ spec:
       labels:
         app: server       # Etiqueta del pod
     spec:
-        hostNetwork: true
-        dnsPolicy: ClusterFirstWithHostNet
+        volumes:
+        - name: filemanagerdir
+          hostPath:
+            path: /data/filemanager
+            type: DirectoryOrCreate
         containers:
           - name: server          # nombre del contenedor
+            volumeMounts:
+              - name: filemanagerdir
+                mountPath: /FileManagerDir
             image: d1n0s/p2-server:latest        # imagen Docker a usar
             command: ["/serverFileManager"]      # Binario que se va a ejecutar en el contenedor
             args: ["10.111.182.40", "32002", "172.31.81.126", "32001"] # argumentos para el comando: nombreDelServicio , puertoDelServicio, IPDelServicio, PuertoPorElQueEscuchamos
             ports:
               - containerPort: 32001
+          

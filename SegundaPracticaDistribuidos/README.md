@@ -118,20 +118,21 @@ EC2 worker — Pod server
 ### Fase 4 — Deployments + Services ✅
 - [x] `k8s/broker-deployment.yaml` — 1 réplica, puerto 32002
 - [x] `k8s/broker-service.yaml` — NodePort 32002 (accesible desde `p2-cliente` dentro del VPC)
-- [x] `k8s/server-deployment.yaml` — `hostNetwork: true`, `dnsPolicy: ClusterFirstWithHostNet`, `strategy: Recreate`
+- [x] `k8s/server-deployment.yaml` — `strategy: Recreate`, `hostPath` volume en `/data/filemanager`
+- [x] `k8s/server-service.yaml` — NodePort 32001 (enruta tráfico del nodo a los pods del server)
 - [x] `kubectl apply -f k8s/` — todos los pods en `Running`
 
-### Fase 5 — Demo end-to-end (parcial ✅)
+### Fase 5 — Demo end-to-end ✅
 - [x] Cliente (`p2-cliente`) → broker → server: conexión establecida
 - [x] `upload test.txt` → fichero aparece en `lls` ✅
 - [x] `download test.txt` → fichero descargado en cliente ✅
-- [ ] Varias conexiones simultáneas
-- [ ] Repetir la demo varias veces (robustez)
 
 ### Fase 6 — Configuraciones avanzadas (examen / 10 puntos)
-- [ ] **Avanzada 1:** varias réplicas en un nodo + `FileManagerDir` compartido por `hostPath`
+- [x] **Avanzada 1:** 2 réplicas del server en el worker + `FileManagerDir` compartido por `hostPath` ✅
+  - Ambos pods montan `/data/filemanager` del nodo worker
+  - El NodePort service balancea entre los dos pods
+  - `upload` en una réplica → `lls` muestra el fichero independientemente de a qué réplica llega la petición
 - [ ] **Avanzada 2:** varios nodos esclavos + `FileManagerDir` compartido por **NFS** (PV/PVC)
-- [ ] Verificar que un `upload` en una réplica se ve con `lls` desde otra
 
 ---
 
@@ -153,6 +154,7 @@ EC2 worker — Pod server
     ├── broker-deployment.yaml
     ├── broker-service.yaml
     ├── server-deployment.yaml
+    ├── server-service.yaml
     └── nfs/                   # (avanzada 2) PV/PVC NFS
 ```
 

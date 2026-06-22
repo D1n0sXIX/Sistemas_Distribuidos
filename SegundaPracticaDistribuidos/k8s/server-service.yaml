@@ -1,0 +1,18 @@
+# -- SERVICE --
+
+apiVersion: v1       # versión de la API de Kubernetes para Deployments
+kind: Service          # tipo de objeto
+
+metadata:
+  name: server-service
+
+spec:
+  selector:
+    app: server
+  ports: 
+    - port: 32001     # Puerto del Servicio
+      targetPort: 32001 # Puerto del contenedor
+      nodePort: 32001 # Puerto por el que se conectaran al nodo
+  type: NodePort # Usamos un Service del tipo NodePort porque:
+                # NodePort abre un puerto en el nodo worker (172.31.81.126:32002)
+                # que sí es alcanzable desde cualquier máquina del VPC
