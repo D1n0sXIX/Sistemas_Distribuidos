@@ -24,17 +24,21 @@ spec:
     spec:
         volumes:
         - name: filemanagerdir
-          hostPath:
-            path: /data/filemanager
-            type: DirectoryOrCreate
+          persistentVolumeClaim:
+            claimName: nfs-pvc
         containers:
           - name: server          # nombre del contenedor
             volumeMounts:
               - name: filemanagerdir
                 mountPath: /FileManagerDir
             image: d1n0s/p2-server:latest        # imagen Docker a usar
-            command: ["/serverFileManager"]      # Binario que se va a ejecutar en el contenedor
-            args: ["10.111.182.40", "32002", "172.31.81.126", "32001"] # argumentos para el comando: nombreDelServicio , puertoDelServicio, IPDelServicio, PuertoPorElQueEscuchamos
+            env:
+            - name: MY_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            command: ["/bin/sh", "-c"]
+            args: ["/serverFileManager 10.111.182.40 32002 $MY_NODE_IP 32001"]
             ports:
               - containerPort: 32001
           

@@ -1,0 +1,15 @@
+# PV - Describe un almacenamiento físico real:
+# "existe este disco/NFS en esta dirección, con este tamaño"
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 172.31.85.178
+    path: /data/filemanager
